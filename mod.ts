@@ -181,3 +181,9 @@ export class Iter<T> implements IterableIterator<T> {
 }
 
 type Option<T> = T | null;
+type Success<T> = { success: true; value: T };
+type Error<E> = { success: false; value: E };
+type Result<T, E> = Success<T> | Error<E>;
+
+const Ok = <T>(value: T): Success<T> => ({ success: true, value });
+const Err = <E>(value: E): Error<E> => ({ success: false, value });
