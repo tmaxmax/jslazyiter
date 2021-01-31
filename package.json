@@ -1,10 +1,12 @@
 {
   "name": "js-rust-iter",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Lazy iterators based on the Iterable protocol, inspired by Rust",
   "main": "dist/mod.js",
   "types": "dist/mod.d.ts",
-  "files": ["dist/*"],
+  "files": [
+    "dist/*"
+  ],
   "scripts": {
     "test": "deno test",
     "build": "deno bundle mod.ts dist/mod.js && tsc"
