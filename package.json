@@ -1,6 +1,6 @@
 {
   "name": "jslazyiter",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Lazy iterators based on the Iterable protocol, inspired by Rust",
   "type": "module",
   "main": "dist/cjs/mod.js",
