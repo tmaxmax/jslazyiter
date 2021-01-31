@@ -1,4 +1,4 @@
-export default class Iter<T> implements Iterable<T> {
+export class Iter<T> implements Iterable<T> {
   private readonly iter: Iterator<T>
 
   constructor(iterable: Iterable<T>)
