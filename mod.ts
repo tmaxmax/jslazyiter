@@ -135,3 +135,5 @@ export class Iter<T> implements IterableIterator<T> {
     return init;
   }
 }
+
+type Option<T> = T | null;
