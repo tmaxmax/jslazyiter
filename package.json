@@ -2,14 +2,18 @@
   "name": "js-rust-iter",
   "version": "0.0.2",
   "description": "Lazy iterators based on the Iterable protocol, inspired by Rust",
-  "main": "dist/mod.js",
+  "main": "dist/mod.cjs",
+  "module": "dist/mod.js",
   "types": "dist/mod.d.ts",
   "files": [
     "dist/*"
   ],
   "scripts": {
     "test": "deno test",
-    "build": "deno bundle mod.ts dist/mod.js && tsc"
+    "bundle": "deno bundle mod.ts dist/mod.js",
+    "types": "tsc",
+    "esm-to-cjs": "babel --plugins @babel/plugin-transform-modules-commonjs dist/mod.js --out-file dist/mod.cjs",
+    "build": "rm -rf dist && mkdir dist && npm run bundle && npm run esm-to-cjs && npm run types"
   },
   "repository": {
     "type": "git",
@@ -34,6 +38,9 @@
   },
   "homepage": "https://github.com/tmaxmax/js-rust-iter#readme",
   "devDependencies": {
+    "@babel/cli": "^7.12.10",
+    "@babel/core": "^7.12.10",
+    "@babel/plugin-transform-modules-commonjs": "^7.12.1",
     "@tsconfig/deno": "^1.0.5",
     "typescript": "^4.1.3"
   }
