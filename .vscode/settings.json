@@ -1,0 +1,10 @@
+{
+  "deno.enable": true,
+  "editor.tabSize": 2,
+  "editor.useTabStops": false,
+  "files.eol": "\n",
+  "editor.defaultFormatter": "denoland.vscode-deno",
+  "deno.import_intellisense_origins": {
+    "https://deno.land": true
+  }
+}
