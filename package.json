@@ -20,7 +20,8 @@
     "bundle": "mkdir dist/esm && deno bundle mod.ts dist/esm/mod.js",
     "types": "tsc",
     "esm-to-cjs": "mkdir dist/cjs && babel --plugins @babel/plugin-transform-modules-commonjs dist/esm/mod.js --out-file dist/cjs/mod.js && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-    "build": "rm -rf dist && mkdir dist && npm run bundle && npm run esm-to-cjs && npm run types"
+    "build": "rm -rf dist && mkdir dist && npm run bundle && npm run esm-to-cjs && npm run types",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -49,6 +50,7 @@
     "@babel/core": "^7.12.10",
     "@babel/plugin-transform-modules-commonjs": "^7.12.1",
     "@tsconfig/deno": "^1.0.5",
+    "prettier": "^2.2.1",
     "typescript": "^4.1.3"
   }
 }
