@@ -106,4 +106,32 @@ export class Iter<T> implements IterableIterator<T> {
       },
     });
   }
+
+  /**
+   * **fold** applies a function to each element, returning
+   * a single value and consuming the iterator.
+   * 
+   * It is also called **reduce** or **inject**.
+   * 
+   * @example
+   * const set = new Set(["doorknob", "cappucino", "cappucino", "pianissimo", "baz", "abdicate"]);
+   * const word = new Iter(set).fold('', (acc, w) => acc + w.slice(-1));
+   * console.log(word); // booze
+   * 
+   * @param init The accumulator's initial value.
+   * @param f Function that takes as arguments the
+   * accumulator's value and the current value iterated
+   * over and returns the new accumulator value.
+   * @returns the final accumulator value
+   */
+  fold<U>(init: U, f: (acc: U, v: T) => U): U {
+    for (
+      let { value, done } = this.next();
+      !done;
+      ({ value, done } = this.next())
+    ) {
+      init = f(init, value);
+    }
+    return init;
+  }
 }
