@@ -134,4 +134,50 @@ export class Iter<T> implements IterableIterator<T> {
     }
     return init;
   }
+
+  /**
+   * **fold1** is the same as **fold**, but uses the first
+   * element as the initial value for the accumulator.
+   * If the iterator is empty, it returns null, else the
+   * result of the fold
+   * 
+   * @param f
+   */
+  fold1(f: (acc: T, v: T) => T): Option<T> {
+    const { value, done } = this.next();
+    if (done) {
+      return null;
+    }
+    return this.fold(value, f);
+  }
+
+  /**
+   * **count** counts the elements in the iterator by calling
+   * **next** repeatedly until the iterator is consumed.
+   * 
+   * @returns the number of elements in the iterator
+   */
+  count(): number {
+    return this.fold(0, (acc) => acc + 1);
+  }
+
+  /**
+   * **forEach** calls the provided function for each element in
+   * the iterator, consuming it.
+   * 
+   * @param f The function to call
+   */
+  forEach(f: (value: T) => void): void {
+    this.fold<void>(undefined, (_, value) => f(value));
+  }
+
+  /**
+   * @returns the last element in the iterator, if any, consuming
+   * the iterator.
+   */
+  last(): Option<T> {
+    return this.fold<Option<T>>(null, (_, v) => v);
+  }
 }
+
+type Option<T> = T | null;
