@@ -16,7 +16,7 @@
     "dist/*"
   ],
   "scripts": {
-    "test": "deno test",
+    "test": "deno test *.test.ts",
     "bundle": "mkdir dist/esm && deno bundle mod.ts dist/esm/mod.js",
     "types": "tsc",
     "esm-to-cjs": "mkdir dist/cjs && babel --plugins @babel/plugin-transform-modules-commonjs dist/esm/mod.js --out-file dist/cjs/mod.js && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
