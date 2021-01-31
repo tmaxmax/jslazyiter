@@ -1,4 +1,8 @@
-import { assert, assertEquals } from "https://deno.land/std/testing/asserts.ts";
+import {
+  assert,
+  assertEquals,
+  assertStrictEquals,
+} from "https://deno.land/std/testing/asserts.ts";
 
 import { Iter } from "./mod.ts";
 
@@ -20,4 +24,11 @@ Deno.test("Iter.enumerate", () => {
   const got = [...new Iter(arr).enumerate()];
   const expect = [[0, 1], [1, 2], [2, 3], [3, 4]];
   assertEquals(got, expect);
+});
+
+Deno.test("Iter.fold", () => {
+  const arr = [1, 2, 3, 4];
+  const got = new Iter(arr).fold(0, (acc, v) => acc + v);
+  const expect = 10;
+  assertStrictEquals(got, expect);
 });
