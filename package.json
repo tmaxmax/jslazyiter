@@ -1,6 +1,6 @@
 {
   "name": "js-rust-iter",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Lazy iterators based on the Iterable protocol, inspired by Rust",
   "main": "dist/mod.cjs",
   "module": "dist/mod.js",
