@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/deno/tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "declaration": true,
+    "declarationDir": "dist",
+    "emitDeclarationOnly": true,
+    "target": "ESNext",
+    "lib": ["ESNext"]
+  },
+  "include": ["mod.ts"]
+}

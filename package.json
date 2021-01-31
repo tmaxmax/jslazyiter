@@ -2,9 +2,11 @@
   "name": "js-rust-iter",
   "version": "0.0.1",
   "description": "Lazy iterators based on the Iterable protocol, inspired by Rust",
-  "main": "mod.ts",
+  "main": "dist/mod.js",
+  "types": "dist/mod.d.ts",
   "scripts": {
-    "test": "deno test"
+    "test": "deno test",
+    "build": "deno bundle mod.ts dist/mod.js && tsc"
   },
   "repository": {
     "type": "git",
@@ -27,5 +29,9 @@
   "bugs": {
     "url": "https://github.com/tmaxmax/js-rust-iter/issues"
   },
-  "homepage": "https://github.com/tmaxmax/js-rust-iter#readme"
+  "homepage": "https://github.com/tmaxmax/js-rust-iter#readme",
+  "devDependencies": {
+    "@tsconfig/deno": "^1.0.5",
+    "typescript": "^4.1.3"
+  }
 }
