@@ -6,7 +6,13 @@
   "editor.useTabStops": false,
   "files.eol": "\n",
   "files.encoding": "utf8",
-  "editor.defaultFormatter": "denoland.vscode-deno",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
   "deno.import_intellisense_origins": {
     "https://deno.land": true
   }
