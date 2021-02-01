@@ -67,3 +67,7 @@ Deno.test("filterMap", () => {
     ...new Iter(["0", "2", "a", "4", "b"]).filterMap(parseIntegral),
   ], [0, 2, 4]);
 });
+
+Deno.test("map", () => {
+  assertEquals([...new Iter([1, 2, 3, 4]).map(add(1))], [2, 3, 4, 5]);
+});
