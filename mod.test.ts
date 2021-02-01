@@ -99,3 +99,37 @@ Deno.test("partialCmpBy", () => {
     assert(some(res) && res > 0);
   }
 });
+
+Deno.test("all", () => {
+  {
+    const iter = new Iter([1, 2, 3, 4]);
+    assert(iter.all((n) => n > 0));
+    assert(iter.next().done, "iterator shall be fully consumed");
+  }
+  {
+    const iter = new Iter([1, 2, 3, 4]);
+    assert(!iter.all((n) => n < 3));
+    const next = iter.next();
+    assert(
+      !next.done && next.value === 4,
+      "iterator shall not be fully consumed",
+    );
+  }
+});
+
+Deno.test("any", () => {
+  {
+    const iter = new Iter([1, 2, 3, 4]);
+    assert(iter.any((n) => n > 2));
+    const next = iter.next();
+    assert(
+      !next.done && next.value === 4,
+      "iterator shall not be fully consumed",
+    );
+  }
+  {
+    const iter = new Iter([1, 2, 3, 4]);
+    assert(!iter.any((n) => n < 1));
+    assert(iter.next().done, "iterator shall be fully consumed");
+  }
+});

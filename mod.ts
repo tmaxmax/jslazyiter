@@ -64,6 +64,7 @@ export default class Iter<T> implements IterableIterator<T> {
   /**
    * Wraps any object that is an iterable or an iterator in
    * an Iter object
+   * 
    * @param iter The object to wrap
    */
   constructor(iter: IntoIter<T>) {
@@ -84,10 +85,10 @@ export default class Iter<T> implements IterableIterator<T> {
    * 
    * @example
    * const it = new Iter([1, 2, 3]);
-   * let { value, done } = it.next(); // value === 1, done == false
-   * ({ value, done } = it.next());   // value === 2, done == false
-   * ({ value, done } = it.next());   // value === 3, done == false
-   * ({ value, done } = it.next());   // typeof value === "undefined", done === true
+   * let { value, done } = it.next(); assert(value === 1 && !done);
+   * ({ value, done } = it.next());   assert(value === 2 && !done);
+   * ({ value, done } = it.next());   assert(value === 3 && !done);
+   * ({ value, done } = it.next());   assert(typeof value === "undefined" && done);
    */
   next(): IteratorResult<T> {
     return this.iter.next();
@@ -122,7 +123,7 @@ export default class Iter<T> implements IterableIterator<T> {
    * @example
    * const set = new Set(["doorknob", "cappucino", "cappucino", "pianissimo", "baz", "abdicate"]);
    * const word = new Iter(set).fold('', (acc, w) => acc + w.slice(-1));
-   * console.log(word); // booze
+   * assertStrictEquals(word, "booze");
    * 
    * @param init The accumulator's initial value.
    * @param f Function that takes as arguments the
@@ -274,7 +275,7 @@ export default class Iter<T> implements IterableIterator<T> {
    * 
    * const arr = ["lol", "NaN", "2", "5"];
    * const firstNumber = new Iter(arr).findMap(coolParseInt);
-   * // firstNumber === 2
+   * assertStrictEquals(firstNumber, 2);
    * 
    * @param f The function to apply
    * @returns The first non-null value after the function was applied, if any
@@ -296,8 +297,7 @@ export default class Iter<T> implements IterableIterator<T> {
    * @example
    * const numbers = [1, 2, 3, 4, 5];
    * const coolNumbers = [...new Iter(numbers).filter((n) => n > 2)];
-   * console.log(coolNumbers);
-   * // [ 3, 4, 5, ]
+   * assertEquals(coolNumbers, [ 3, 4, 5, ]);
    * 
    * @param p The predicate to be satisfied
    */
@@ -326,8 +326,7 @@ export default class Iter<T> implements IterableIterator<T> {
    *   return num;
    * }
    * const numbers = [...new Iter(["a", "b", "1", "2", "c"]).filterMap(coolParseInt)];
-   * console.log(numbers);
-   * // [ 1, 2 ]
+   * assertEquals(numbers, [1, 2]);
    * 
    * @param f The function to be applied
    */
@@ -357,8 +356,7 @@ export default class Iter<T> implements IterableIterator<T> {
    * 
    * @example
    * const square = [...new Iter([1, 2, 3, 4]).map((n) => n * n)];
-   * console.log(square)
-   * // [ 1, 4, 9, 16 ]
+   * assertEquals(square, [1, 4, 9, 16]);
    * 
    * @example
    * const arr = [1, 2, 3, 4];
@@ -545,6 +543,7 @@ export default class Iter<T> implements IterableIterator<T> {
    * return false, which is not a valid result in this situation.
    * 
    * @example
+   * 
    * function cmpNumbers(lhs: nummber, rhs: number): Option<number> {
    *   if (Number.isNaN(lhs) || Number.isNaN(rhs)) {
    *     return null;
@@ -553,9 +552,9 @@ export default class Iter<T> implements IterableIterator<T> {
    * }
    * 
    * const lhs = [1.0, 2.3, 4.6, 7.8];
-   * new Iter(lhs).partialCmpBy([1.0, 2.3, 4.6, 7.8], cmpNumbers) // === 0
-   * new Iter(lhs).partialCmpBy([1.0, 2.2, NaN, 7.8], cmpNumbers) // > 0
-   * new Iter(lhs).partialCmpBy([1.0, 2.3, NaN, 7.8], cmpNumbers) // === null
+   * assert(new Iter(lhs).partialCmpBy([1.0, 2.3, 4.6, 7.8], cmpNumbers) === 0);
+   * assert(new Iter(lhs).partialCmpBy([1.0, 2.2, NaN, 7.8], cmpNumbers) > 0);
+   * assert(new Iter(lhs).partialCmpBy([1.0, 2.3, NaN, 7.8], cmpNumbers) === null);
    * 
    * @param i The iterable or iterator to compare to.
    * @param cmp The comparison function.
@@ -585,5 +584,60 @@ export default class Iter<T> implements IterableIterator<T> {
         return cmpRes;
       }
     }
+  }
+
+  /**
+   * **all** tests if every element of the iterator satisfies
+   * the given predicate.
+   * 
+   * This function short-circuits on first occurence of false,
+   * which means the rest of the elements after the first that
+   * does not satisfy the predicate are still available for
+   * iteration.
+   * 
+   * @example
+   * 
+   * assert(new Iter([1, 2, 3]).all((n) => n > 0));
+   * 
+   * @example
+   * 
+   * const iter = new Iter([1, 2, 3]);
+   * assert(!iter.all((n) => n !== 2));
+   * assertStrictEquals(iter.next().value, 3);
+   * 
+   * @param p The predicate to be satisfied
+   */
+  all(p: (v: T) => boolean): boolean {
+    return this.tryFold(
+      undefined,
+      (_, v) => ({ success: p(v), value: undefined }),
+    ).success;
+  }
+
+  /**
+   * **any** tests if any element in the iterator satisfies the
+   * predicate.
+   * 
+   * This function short-circuits on the first occurrence of true,
+   * which means the rest of elements after the first element
+   * that satisfied the predicate are still available for iteration.
+   * 
+   * @example
+   * 
+   * assert(new Iter([1, 2, 3]).any((n) => n > 0));
+   * 
+   * @example
+   * 
+   * const iter = new Iter([1, 2, 3]);
+   * assert(iter.any((n) => n !== 2));
+   * assertStrictEquals(iter.next().value, 2);
+   * 
+   * @param p The predicate to be satisfied
+   */
+  any(p: (v: T) => boolean): boolean {
+    return !this.tryFold(
+      undefined,
+      (_, v) => ({ success: !p(v), value: undefined }),
+    ).success;
   }
 }
