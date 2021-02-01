@@ -343,4 +343,48 @@ export class Iter<T> implements IterableIterator<T> {
 
     return new Iter({ next });
   }
+
+  /**
+   * **map** creates a new iterator that calls the given function
+   * on each element of the old iterator.
+   * 
+   * In other words, it transforms an iterator over elements of type
+   * T into an iterator over elements of type U, where U is the result
+   * of the given function
+   * 
+   * **map** is lazy, meaning that it won't execute until the iterator
+   * is consumed. If you want to loop over the collection for side effects
+   * use a for..of construct or Iter's **forEach** method.
+   * 
+   * @example
+   * const square = [...new Iter([1, 2, 3, 4]).map((n) => n * n)];
+   * console.log(square)
+   * // [ 1, 4, 9, 16 ]
+   * 
+   * @example
+   * const arr = [1, 2, 3, 4];
+   * new Iter(arr).map(console.log) // this won't execute
+   * 
+   * // do this
+   * for (const elem of arr) {
+   *   console.log(elem);
+   * }
+   * // or this
+   * new Iter(arr).forEach(console.log);
+   * 
+   * @param f The function to apply
+   */
+  map<U>(f: (v: T) => U): Iter<U> {
+    const iter = this.iter;
+
+    return new Iter({
+      next() {
+        const { value, done } = iter.next();
+        if (done) {
+          return { value, done };
+        }
+        return { value: f(value) };
+      },
+    });
+  }
 }
