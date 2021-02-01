@@ -1,3 +1,8 @@
+import type { Option } from "./option.ts";
+import { some } from "./option.ts";
+import type { Result } from "./result.ts";
+import { ok } from "./result.ts";
+
 /**
  * Iter is a wrapper over ECMAScript 2015's protocol.
  * Based on the protocol defined next() method, Iter provides
@@ -80,8 +85,10 @@ export class Iter<T> implements IterableIterator<T> {
    * 
    * @example
    * const it = new Iter([1, 2, 3]);
-   * const { value, done } = it.next();
-   * // value === 1, done == false
+   * let { value, done } = it.next(); // value === 1, done == false
+   * ({ value, done } = it.next());   // value === 2, done == false
+   * ({ value, done } = it.next());   // value === 3, done == false
+   * ({ value, done } = it.next());   // typeof value === "undefined", done === true
    */
   next(): IteratorResult<T> {
     return this.iter.next();
@@ -178,6 +185,162 @@ export class Iter<T> implements IterableIterator<T> {
   last(): Option<T> {
     return this.fold<Option<T>>(null, (_, v) => v);
   }
-}
 
-type Option<T> = T | null;
+  /**
+   * **tryFold** applies the function as long as it returns successfully,
+   * producing a final, single value. Check Result's documentation to see
+   * how to use it.
+   * 
+   * This function works the same as **fold**, except that it short-circuits
+   * when an error occurs. If all the function calls succeed, the final value
+   * of the accumulator is returned, else the first error that occured is.
+   * 
+   * @example
+   * const sum = new Iter(stringArray).tryFold(0, (acc, v) => {
+   *   const num = parseInt(v, 10);
+   *   if (Number.isNaN(num)) {
+   *     return { success: false };
+   *   }
+   *   return { success: true, value: acc + num };
+   * })
+   * // see ok documentation
+   * if (ok(sum)) {
+   *   console.log(sum.value);
+   * } else {
+   *   console.log("A string was not a number!");
+   * }
+   * 
+   * @param init The inital value of the accumulator
+   * @param f The function to be applied
+   * @returns The final value of the accumulator, if the function succeeds,
+   * else the first error that occured
+   */
+  tryFold<U, E>(init: U, f: (acc: U, v: T) => Result<U, E>): Result<U, E> {
+    for (
+      let { value: v, done } = this.next();
+      !done;
+      ({ value: v, done } = this.next())
+    ) {
+      const res = f(init, v);
+      if (ok(res)) {
+        init = res.value;
+      } else {
+        return res;
+      }
+    }
+    return { success: true, value: init };
+  }
+
+  /**
+   * **tryForEach** consumes the iterator, applying the provided function
+   * to each element. If the function returns unsuccessfully, the iteration
+   * stops and the error is returned.
+   * 
+   * @param f The function to call
+   * @returns nothing, if the calls to the function succeeded on all elements,
+   * else the first error that occurred.
+   */
+  tryForEach<E>(f: (v: T) => Result<void, E>): Result<void, E> {
+    return this.tryFold<void, E>(undefined, (_, v) => f(v));
+  }
+
+  /**
+   * **find** finds the first element in the iterator that satisfies the
+   * given predicate, consuming all the previous elements.
+   * 
+   * @param p The predicate to be satisfied
+   * @returns The first element satisfying the predicate, if any
+   */
+  find(p: (v: T) => boolean): Option<T> {
+    return this.tryFold<null, T>(null, (_, value) => {
+      if (p(value)) {
+        return { success: false, value };
+      }
+      return { success: true, value: null };
+    }).value;
+  }
+
+  /**
+   * **findMap** finds the first element that after applying the function
+   * is not null, consuming all the previous elements.
+   * 
+   * @example
+   * function coolParseInt(s: string): Option<number> {
+   *   const num = parseInt(s, 10);
+   *   if (Number.isNaN(num)) {
+   *     return null;
+   *   }
+   *   return num;
+   * }
+   * 
+   * const arr = ["lol", "NaN", "2", "5"];
+   * const firstNumber = new Iter(arr).findMap(coolParseInt);
+   * // firstNumber === 2
+   * 
+   * @param f The function to apply
+   * @returns The first non-null value after the function was applied, if any
+   */
+  findMap<U>(f: (v: T) => Option<U>): Option<U> {
+    return this.tryFold<null, U>(null, (_, v) => {
+      const value = f(v);
+      if (some(value)) {
+        return { success: false, value };
+      }
+      return { success: true, value: null };
+    }).value;
+  }
+
+  /**
+   * **filter** creates an iterator that returns only the elemnts in the old
+   * iterator that satisfy the given predicate
+   * 
+   * @example
+   * const numbers = [1, 2, 3, 4, 5];
+   * const coolNumbers = [...new Iter(numbers).filter((n) => n > 2)];
+   * console.log(coolNumbers);
+   * // [ 3, 4, 5, ]
+   * 
+   * @param p The predicate to be satisfied
+   */
+  filter(p: (v: T) => boolean): Iter<T> {
+    const next = (): IteratorResult<T> => {
+      const value = this.find(p);
+      if (some(value)) {
+        return { value };
+      }
+      return { value, done: true };
+    };
+
+    return new Iter({ next });
+  }
+
+  /**
+   * **filterMap** creates an iterator that returns only the non-null elements
+   * resulted from applying the passed function to the elements of the old iterator.
+   * 
+   * @example
+   * function coolParseInt(s: string): Option<number> {
+   *   const num = parseInt(s, 10);
+   *   if (Number.isNaN(num)) {
+   *     return null;
+   *   }
+   *   return num;
+   * }
+   * const numbers = [...new Iter(["a", "b", "1", "2", "c"]).filterMap(coolParseInt)];
+   * console.log(numbers);
+   * // [ 1, 2 ]
+   * 
+   * @param f The function to be applied
+   */
+  filterMap<U>(f: (v: T) => Option<U>): Iter<U> {
+    const next = (): IteratorResult<U> => {
+      const value = this.findMap(f);
+      if (some(value)) {
+        return { value };
+      }
+      return { value, done: true };
+    };
+
+    return new Iter({ next });
+  }
+}

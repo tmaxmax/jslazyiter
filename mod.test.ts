@@ -6,6 +6,9 @@ import {
 import { add } from "https://deno.land/x/fae@v1.0.0/mod.ts";
 
 import { Iter } from "./mod.ts";
+import { none } from "./option.ts";
+import { Result } from "./result.ts";
+import { parseIntegral } from "./util.ts";
 
 Deno.test("is iterable", () => {
   const expect = [1, 2, 3, 4];
@@ -34,4 +37,33 @@ Deno.test("fold", () => {
     0,
     "expect inital value on empty iterator",
   );
+});
+
+Deno.test("tryFold", () => {
+  const fn = (acc: number, v: string): Result<number, string> => {
+    const num = parseIntegral(v);
+    if (none(num)) {
+      return { success: false, value: v };
+    }
+    return { success: true, value: acc + num };
+  };
+
+  assertEquals(new Iter(["1", "2", "3", "4"]).tryFold(0, fn), {
+    success: true,
+    value: 10,
+  });
+  assertEquals(new Iter(["1", "2", "a", "b"]).tryFold(0, fn), {
+    success: false,
+    value: "a",
+  });
+});
+
+Deno.test("filter", () => {
+  assertEquals([...new Iter([1, 2, 3, 4]).filter((n) => n > 2)], [3, 4]);
+});
+
+Deno.test("filterMap", () => {
+  assertEquals([
+    ...new Iter(["0", "2", "a", "4", "b"]).filterMap(parseIntegral),
+  ], [0, 2, 4]);
 });
