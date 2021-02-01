@@ -58,7 +58,7 @@ type IntoIter<T> = Iterable<T> | Iterator<T>;
  * 
  * @template T the type to iterate over
  */
-export class Iter<T> implements IterableIterator<T> {
+export default class Iter<T> implements IterableIterator<T> {
   private readonly iter: Iterator<T>;
 
   /**

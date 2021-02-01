@@ -5,7 +5,7 @@ import {
 } from "https://deno.land/std/testing/asserts.ts";
 import { add } from "https://deno.land/x/fae@v1.0.0/mod.ts";
 
-import { Iter } from "./mod.ts";
+import Iter from "./mod.ts";
 import { none, some } from "./option.ts";
 import { Result } from "./result.ts";
 import { cmpNumbers, parseIntegral } from "./util.ts";
