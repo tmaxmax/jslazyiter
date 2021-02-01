@@ -1,6 +1,5 @@
 import { Option, some } from "./option.ts";
 import { ok, Result } from "./result.ts";
-import { isSum } from "./util.ts";
 
 /**
  * **Comparator** represents a comparator functions.
