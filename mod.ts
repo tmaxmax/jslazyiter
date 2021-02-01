@@ -1,7 +1,11 @@
-import type { Option } from "./option.ts";
-import { some } from "./option.ts";
-import type { Result } from "./result.ts";
-import { ok } from "./result.ts";
+import { Option, some } from "./option.ts";
+import { ok, Result } from "./result.ts";
+
+/**
+ * **IntoIter** is the type that a value must satisfy to
+ * be turned into an Iter
+ */
+type IntoIter<T> = Iterable<T> | Iterator<T>;
 
 /**
  * Iter is a wrapper over ECMAScript 2015's protocol.
@@ -58,16 +62,11 @@ export class Iter<T> implements IterableIterator<T> {
   private readonly iter: Iterator<T>;
 
   /**
-   * Wraps an iterable in an Iter object
-   * @param iterable The object to wrap
+   * Wraps any object that is an iterable or an iterator in
+   * an Iter object
+   * @param iter The object to wrap
    */
-  constructor(iterable: Iterable<T>);
-  /**
-   * Wraps an iterator in an Iter object
-   * @param iterator The object to wrap
-   */
-  constructor(iterator: Iterator<T>);
-  constructor(iter: Iterator<T> | Iterable<T>) {
+  constructor(iter: IntoIter<T>) {
     if (Symbol.iterator in iter) {
       this.iter = (iter as Iterable<T>)[Symbol.iterator]();
     } else {
@@ -375,16 +374,216 @@ export class Iter<T> implements IterableIterator<T> {
    * @param f The function to apply
    */
   map<U>(f: (v: T) => U): Iter<U> {
-    const iter = this.iter;
+    const next = (): IteratorResult<U> => {
+      const { value, done } = this.next();
+      if (done) {
+        return { value, done };
+      }
+      return { value: f(value) };
+    };
 
-    return new Iter({
-      next() {
-        const { value, done } = iter.next();
-        if (done) {
-          return { value, done };
+    return new Iter({ next });
+  }
+
+  /**
+   * **cmpBy** lexicographically compares the elements in this iterator
+   * to the ones in the other iterator using the given comparator.
+   * 
+   * The comparator returns a negative number if *lhs* precedes *rhs*, 0
+   * if they are equal, or a positive number if *lhs* succeeds *rhs*.
+   * 
+   * This can be used to compare iterators over distinct types.
+   * 
+   * If you find yourself comparing types that have partial equality only
+   * (not all values can be compared, such as NaN for numbers), use
+   * **partialCmpBy** instead.
+   * 
+   * @param i The iterable or iterator to compare to
+   * @param cmp The comparison function
+   */
+  cmpBy<U>(
+    i: IntoIter<U>,
+    cmp: (lhs: T, rhs: U) => number,
+  ): number {
+    const other = new Iter(i);
+
+    while (true) {
+      const lhs = this.next();
+      const rhs = other.next();
+
+      if (lhs.done) {
+        if (rhs.done) {
+          return 0;
         }
-        return { value: f(value) };
-      },
+        return -1;
+      }
+      if (rhs.done) {
+        return 1;
+      }
+
+      const cmpRes = cmp(lhs.value, rhs.value);
+      if (cmpRes !== 0) {
+        return cmpRes;
+      }
+    }
+  }
+
+  /**
+   * **cmp** lexicographically compares this iterator to the other.
+   * 
+   * This function uses strict equality and operators `<` and `>` to compare
+   * the values. If this doesn't satisfy your requirement, use **cmpBy** with
+   * your custom comparator.
+   */
+  cmp(i: IntoIter<T>): number {
+    return this.cmpBy(i, (lhs, rhs) => {
+      if (lhs === rhs) {
+        return 0;
+      }
+      if (lhs < rhs) {
+        return -1;
+      }
+      return 1;
     });
+  }
+
+  /**
+   * **eqBy** checks if two iterators are equal with the given
+   * identity function.
+   * 
+   * This can be used to compare iterators over distinct types,
+   * if needed.
+   * 
+   * If you find yourself comparing types that have partial equality only
+   * (not all values can be compared, such as NaN for numbers), use
+   * **partialCmpBy** instead.
+   * 
+   * @param i The iterable or iterator to compare to
+   * @param eq The identity function
+   */
+  eqBy<U>(i: IntoIter<U>, eq: (lhs: T, rhs: U) => boolean): boolean {
+    const other = new Iter(i);
+
+    while (true) {
+      const lhs = this.next();
+      const rhs = other.next();
+
+      if (lhs.done) {
+        return !!rhs.done;
+      }
+      if (rhs.done) {
+        return false;
+      }
+
+      if (!eq(lhs.value, rhs.value)) {
+        return false;
+      }
+    }
+  }
+
+  /**
+   * **eq** determines if this iterator is equal to another
+   * using strict equality.
+   */
+  eq(i: IntoIter<T>): boolean {
+    return this.eqBy(i, (lhs, rhs) => lhs === rhs);
+  }
+
+  /**
+   * **ne** determines if this iterator is not equal to another
+   * using strict equality.
+   */
+  ne(i: IntoIter<T>): boolean {
+    return !this.eq(i);
+  }
+
+  /**
+   * **ge** determines if the elements of this iterator are
+   * lexicographically greater or equal than the elements of
+   * another.
+   */
+  ge(i: IntoIter<T>): boolean {
+    return this.cmp(i) >= 0;
+  }
+
+  /**
+   * **gt** determines if the elements of this iterator are
+   * lexicographically greater than the elements of another.
+   */
+  gt(i: IntoIter<T>): boolean {
+    return this.cmp(i) > 0;
+  }
+
+  /**
+   * **le** determines if the elements of this iterator are
+   * lexicographically lower or equal to the elements of another.
+   */
+  le(i: IntoIter<T>): boolean {
+    return this.cmp(i) <= 0;
+  }
+
+  /**
+   * **lt** determines if the elements of this iterator are
+   * lexicographically lower than the elements of another.
+   */
+  lt(i: IntoIter<T>): boolean {
+    return this.cmp(i) < 0;
+  }
+
+  /**
+   * **partialCmpBy** lexicographically compares two iterators using the
+   * provided comparator.
+   * 
+   * Use this function if you're comparing values that have only partial
+   * equality relationship (they can't always be compared, such as NaN
+   * for numbers). Read further for details.
+   * 
+   * The difference between **cmpBy** and this function is that this
+   * should be used when the two types can't always be compared. Take
+   * floating point numbers, for example: NaN is not equal to any other
+   * number. If a NaN would exist in an iterator **cmpBy** would simply
+   * return false, which is not a valid result in this situation.
+   * 
+   * @example
+   * function cmpNumbers(lhs: nummber, rhs: number): Option<number> {
+   *   if (Number.isNaN(lhs) || Number.isNaN(rhs)) {
+   *     return null;
+   *   }
+   *   return lhs - rhs;
+   * }
+   * 
+   * const lhs = [1.0, 2.3, 4.6, 7.8];
+   * new Iter(lhs).partialCmpBy([1.0, 2.3, 4.6, 7.8], cmpNumbers) // === 0
+   * new Iter(lhs).partialCmpBy([1.0, 2.2, NaN, 7.8], cmpNumbers) // > 0
+   * new Iter(lhs).partialCmpBy([1.0, 2.3, NaN, 7.8], cmpNumbers) // === null
+   * 
+   * @param i The iterable or iterator to compare to.
+   * @param cmp The comparison function.
+   */
+  partialCmpBy<U>(
+    i: IntoIter<U>,
+    cmp: (lhs: T, rhs: U) => Option<number>,
+  ): Option<number> {
+    const other = new Iter(i);
+
+    while (true) {
+      const lhs = this.next();
+      const rhs = other.next();
+
+      if (lhs.done) {
+        if (rhs.done) {
+          return 0;
+        }
+        return -1;
+      }
+      if (rhs.done) {
+        return 1;
+      }
+
+      const cmpRes = cmp(lhs.value, rhs.value);
+      if (!some(cmpRes) || cmpRes !== 0) {
+        return cmpRes;
+      }
+    }
   }
 }

@@ -7,3 +7,10 @@ export function parseIntegral(s: string): Option<number> {
   }
   return num;
 }
+
+export function cmpNumbers(lhs: number, rhs: number): Option<number> {
+  if (Number.isNaN(lhs) || Number.isNaN(rhs)) {
+    return null;
+  }
+  return lhs - rhs;
+}

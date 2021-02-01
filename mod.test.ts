@@ -6,9 +6,9 @@ import {
 import { add } from "https://deno.land/x/fae@v1.0.0/mod.ts";
 
 import { Iter } from "./mod.ts";
-import { none } from "./option.ts";
+import { none, some } from "./option.ts";
 import { Result } from "./result.ts";
-import { parseIntegral } from "./util.ts";
+import { cmpNumbers, parseIntegral } from "./util.ts";
 
 Deno.test("is iterable", () => {
   const expect = [1, 2, 3, 4];
@@ -70,4 +70,32 @@ Deno.test("filterMap", () => {
 
 Deno.test("map", () => {
   assertEquals([...new Iter([1, 2, 3, 4]).map(add(1))], [2, 3, 4, 5]);
+});
+
+Deno.test("cmpBy", () => {
+  const lhs = ["foo", "bar", "baz"];
+  const cmp = (lhs: string, rhs: string) => lhs.length - rhs.length;
+  assert(new Iter(lhs).cmpBy(["abc", "def", "ghi"], cmp) === 0);
+  assert(new Iter(lhs).cmpBy(["abc", "defg", "hi"], cmp) < 0);
+  assert(new Iter(lhs).cmpBy(["abc", "de", "fghi"], cmp) > 0);
+});
+
+Deno.test("eqBy", () => {
+  const lhs = [1, 2, 3];
+  const eq = (lhs: number, rhs: number) => lhs * lhs === rhs * rhs;
+  assert(new Iter(lhs).eqBy([1, -2, 3], eq));
+  assert(!(new Iter(lhs).eqBy([1, -3, 2], eq)));
+});
+
+Deno.test("partialCmpBy", () => {
+  const lhs = [1.4, 2.6, 3.7, 7.8];
+  {
+    const res = new Iter(lhs).partialCmpBy([1.4, 2.6, 3.7, 7.8], cmpNumbers);
+    assert(some(res) && res === 0);
+  }
+  assert(new Iter(lhs).partialCmpBy([1.4, 2.6, NaN, 7.8], cmpNumbers) === null);
+  {
+    const res = new Iter(lhs).partialCmpBy([1.4, 2.5, NaN, 7.8], cmpNumbers);
+    assert(some(res) && res > 0);
+  }
 });
