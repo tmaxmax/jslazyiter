@@ -43,6 +43,13 @@ const minCmp = <T>(lhs: T, rhs: T): number => {
   return 0;
 };
 
+const fromIntoIter = <T>(i: IntoIter<T>): Iter<T> => {
+  if (i instanceof Iter) {
+    return i;
+  }
+  return new Iter(i);
+};
+
 /**
  * **IntoIter** is the type that a value must satisfy to
  * be turned into an Iter
@@ -443,7 +450,7 @@ export default class Iter<T> implements IterableIterator<T> {
     i: IntoIter<U>,
     cmp: Comparator<T, U>,
   ): number {
-    const other = new Iter(i);
+    const other = fromIntoIter(i);
 
     while (true) {
       const lhs = this.next();
@@ -500,7 +507,7 @@ export default class Iter<T> implements IterableIterator<T> {
    * @param eq The identity function
    */
   eqBy<U>(i: IntoIter<U>, eq: (lhs: T, rhs: U) => boolean): boolean {
-    const other = new Iter(i);
+    const other = fromIntoIter(i);
 
     while (true) {
       const lhs = this.next();
@@ -603,7 +610,7 @@ export default class Iter<T> implements IterableIterator<T> {
     i: IntoIter<U>,
     cmp: PartialComparator<T, U>,
   ): Option<number> {
-    const other = new Iter(i);
+    const other = fromIntoIter(i);
 
     while (true) {
       const lhs = this.next();
@@ -781,5 +788,35 @@ export default class Iter<T> implements IterableIterator<T> {
       return res[1];
     }
     return null;
+  }
+
+  /**
+   * **zip** 'zips up' two iterators into a single iterator of pairs.
+   * 
+   * It returns a new iterator that will iterate over two other iterators,
+   * returning a tuple where the first element comes from the first iterator,
+   * and the second element comes from the second iterator.
+   * 
+   * In other words, it zips two iterators together, into a single one.
+   * 
+   * If either iterator is done before the other, this iterator will be done.
+   * 
+   * @param other The iterable to zip with
+   */
+  zip<U>(other: IntoIter<U>): Iter<[T, U]> {
+    const iter = new Iter(other);
+    const next = (): IteratorResult<[T, U]> => {
+      const lhs = this.next();
+      if (lhs.done) {
+        return { value: undefined, done: true };
+      }
+      const rhs = iter.next();
+      if (rhs.done) {
+        return { value: undefined, done: true };
+      }
+      return { value: [lhs.value, rhs.value] };
+    };
+
+    return new Iter({ next });
   }
 }

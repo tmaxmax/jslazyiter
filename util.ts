@@ -1,4 +1,4 @@
-import type { Option } from "./option.ts";
+import { Option, some } from "./option.ts";
 
 export function parseIntegral(s: string): Option<number> {
   const num = parseInt(s);
@@ -15,6 +15,10 @@ export function cmpNumbers(lhs: number, rhs: number): Option<number> {
   return lhs - rhs;
 }
 
+/**
+ * **range** returns a generator that yields number starting from 0, indefinitely.
+ */
+export function range(): IterableIterator<number>;
 /**
  * **range** returns a generator that yields numbers from 0 to len - 1.
  * Pass `true` as the next argument to get an inclusive range.
@@ -71,37 +75,51 @@ export function range(
   inclusive: true,
 ): IterableIterator<number>;
 export function* range(
-  a: number,
+  a?: number,
   b?: number | true,
   c?: number | true,
   d?: true,
 ): IterableIterator<number> {
-  const [begin, end, step] = (() => {
-    if (typeof b === "boolean") {
-      return [0, a + 1, 1];
-    }
-    if (typeof b === "number") {
-      if (typeof c === "boolean") {
-        return [a, b + 1, 1];
+  const params = (() => {
+    if (typeof a === "number") {
+      if (typeof b === "boolean") {
+        return [0, a + 1, 1];
       }
-      if (typeof c === "number") {
-        if (typeof d === "boolean") {
-          return [a, b + 1, c];
+      if (typeof b === "number") {
+        if (typeof c === "boolean") {
+          return [a, b + 1, 1];
         }
-        return [a, b, c];
+        if (typeof c === "number") {
+          if (typeof d === "boolean") {
+            return [a, b + 1, c];
+          }
+          return [a, b, c];
+        }
+        return [a, b, 1];
       }
-      return [a, b, 1];
+      return [0, a, 1];
     }
-    return [0, a, 1];
+    return null;
   })();
 
-  if (begin > end) {
-    throw new Error(`Invalid range: begin ${begin} is greater than end ${end}`);
-  }
+  if (some(params)) {
+    const [begin, end, step] = params;
 
-  let i = begin;
-  while (i < end) {
-    yield i;
-    i += step;
+    if (begin > end) {
+      throw new Error(
+        `Invalid range: begin ${begin} is greater than end ${end}`,
+      );
+    }
+
+    let i = begin;
+    while (i < end) {
+      yield i;
+      i += step;
+    }
+  } else {
+    let i = 0;
+    while (true) {
+      yield i++;
+    }
   }
 }
