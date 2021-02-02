@@ -1,11 +1,14 @@
 import { bench, runBenchmarks } from "https://deno.land/std/testing/bench.ts";
 
 import Iter from "./mod.ts";
-import { range } from "./util.ts";
+import { parseIntegral, range } from "./util.ts";
 
 const rand = (v: number) => Math.random() * v % 100 | 0;
 
-const RUNS = 1;
+const RUNS = parseIntegral(Deno.args[0]) ?? (() => {
+  throw new Error("Run count unspecified or invalid");
+})();
+const ONLY = new RegExp(Deno.args[1]);
 const COUNT = 1000000;
 
 bench({
@@ -52,4 +55,14 @@ bench({
   },
 });
 
-runBenchmarks();
+bench({
+  name: "enumerate",
+  runs: RUNS,
+  func(b) {
+    b.start();
+    for (const _ of new Iter(range(COUNT)).enumerate());
+    b.stop();
+  },
+});
+
+runBenchmarks({ only: ONLY });
