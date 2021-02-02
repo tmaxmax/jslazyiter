@@ -2,10 +2,52 @@ import { Option, some } from "./option.ts";
 import { ok, Result } from "./result.ts";
 
 /**
+ * **Comparator** represents a comparator functions.
+ * If the return value is positive, lhs is greater than rhs.
+ * If it's negative, then lhs is less than rhs.
+ * Else lhs and rhs are equal.
+ */
+type Comparator<T, U> = (lhs: T, rhs: U) => number;
+/**
+ * PartialComparator is the same as Comparator.
+ * It returns null instead of a number when 2 elements can't
+ * be compared. Such an example would be comparing NaN to
+ * a number - this should return null.
+ */
+type PartialComparator<T, U> = (lhs: T, rhs: U) => Option<number>;
+
+/**
+ * **maxCmp** is used internally as a comparison function
+ * for Iter methods **max** and **maxByKey**. As **maxBy** 
+ * only swaps values if the return value of the function is
+ * positive (lhs is greater), this function ignores the case
+ * when lhs is less than rhs. Because of this, it is a malformed
+ * comparator otherwise, so it should not be used in any other
+ * context.
+ */
+const maxCmp = <T>(lhs: T, rhs: T): number => {
+  if (lhs > rhs) {
+    return 1;
+  }
+  return 0;
+};
+
+/**
+ * **minCmp** is the same as **maxCmp**, but returns -1 if lhs
+ * is less than rhs. 
+ */
+const minCmp = <T>(lhs: T, rhs: T): number => {
+  if (lhs < rhs) {
+    return -1;
+  }
+  return 0;
+};
+
+/**
  * **IntoIter** is the type that a value must satisfy to
  * be turned into an Iter
  */
-type IntoIter<T> = Iterable<T> | Iterator<T>;
+export type IntoIter<T> = Iterable<T> | Iterator<T>;
 
 /**
  * Iter is a wrapper over ECMAScript 2015's protocol.
@@ -104,14 +146,12 @@ export default class Iter<T> implements IterableIterator<T> {
    */
   enumerate(): Iter<[number, T]> {
     let index = 0;
-    const iter = this.iter;
+    const next = (): IteratorResult<[number, T]> => {
+      const { value, done } = this.next();
+      return { value: [index++, value], done };
+    };
 
-    return new Iter({
-      next() {
-        const { value, done } = iter.next();
-        return { value: [index++, value], done };
-      },
-    });
+    return new Iter({ next });
   }
 
   /**
@@ -401,7 +441,7 @@ export default class Iter<T> implements IterableIterator<T> {
    */
   cmpBy<U>(
     i: IntoIter<U>,
-    cmp: (lhs: T, rhs: U) => number,
+    cmp: Comparator<T, U>,
   ): number {
     const other = new Iter(i);
 
@@ -435,13 +475,13 @@ export default class Iter<T> implements IterableIterator<T> {
    */
   cmp(i: IntoIter<T>): number {
     return this.cmpBy(i, (lhs, rhs) => {
-      if (lhs === rhs) {
-        return 0;
-      }
       if (lhs < rhs) {
         return -1;
       }
-      return 1;
+      if (lhs > rhs) {
+        return 1;
+      }
+      return 0;
     });
   }
 
@@ -561,7 +601,7 @@ export default class Iter<T> implements IterableIterator<T> {
    */
   partialCmpBy<U>(
     i: IntoIter<U>,
-    cmp: (lhs: T, rhs: U) => Option<number>,
+    cmp: PartialComparator<T, U>,
   ): Option<number> {
     const other = new Iter(i);
 
@@ -610,6 +650,11 @@ export default class Iter<T> implements IterableIterator<T> {
   all(p: (v: T) => boolean): boolean {
     return this.tryFold(
       undefined,
+      // This assigns false to success when the predicate
+      // isn't satisfied, which makes tryFold end iteration.
+      // success will be true if all elements satisfy the
+      // predicate, else false, so it correctly indicates if all
+      // elements satisfy the predicate
       (_, v) => ({ success: p(v), value: undefined }),
     ).success;
   }
@@ -637,7 +682,104 @@ export default class Iter<T> implements IterableIterator<T> {
   any(p: (v: T) => boolean): boolean {
     return !this.tryFold(
       undefined,
+      // This assigns false to succes when the predicate
+      // is satisfied, which makes tryFold finish iteration.
+      // Because success will be false, but false means there
+      // is an element satisfying the predicate, the return
+      // value of tryFold is negated above.
       (_, v) => ({ success: !p(v), value: undefined }),
     ).success;
+  }
+
+  /**
+   * **maxBy** returns the element with the maximum value with
+   * respect to the specified comparison function
+   * 
+   * Returns null if the iterator is empty.
+   * 
+   * @param cmp The comparison function to use
+   */
+  maxBy(cmp: Comparator<T, T>): Option<T> {
+    return this.fold1((max, v) => {
+      if (cmp(v, max) > 0) {
+        return v;
+      }
+      return max;
+    });
+  }
+
+  /**
+   * **max** returns the maximum element in the iterator, with
+   * respect to operator `>`.
+   * 
+   * Returns null if the iterator is empty.
+   */
+  max(): Option<T> {
+    return this.maxBy(maxCmp);
+  }
+
+  /**
+   * **maxByKey** return the element that gives the maximum value
+   * from the specified function.
+   * 
+   * Returns null if the iterator is empty.
+   * 
+   * @param f The function to get the value to compare
+   * @param cmp Optional comparator, if operator `>` doesn't suffice.
+   */
+  maxByKey<U>(f: (v: T) => U, cmp: Comparator<U, U> = maxCmp): Option<T> {
+    const res = this.map<[U, T]>((v) => [f(v), v]).maxBy(([lhs], [rhs]) =>
+      cmp(lhs, rhs)
+    );
+    if (some(res)) {
+      return res[1];
+    }
+    return null;
+  }
+
+  /**
+   * **minBy** returns the minimum element in the iterator, with
+   * respect to the specified comparison function.
+   * 
+   * Returns null if the iterator is empty.
+   * 
+   * @param cmp The comparison function
+   */
+  minBy(cmp: Comparator<T, T>): Option<T> {
+    return this.fold1((min, v) => {
+      if (cmp(v, min) < 0) {
+        return v;
+      }
+      return min;
+    });
+  }
+
+  /**
+   * **min** returns the minimum element in the iterator, with
+   * respect to operator `<`.
+   * 
+   * Returns null if the iterator is empty.
+   */
+  min(): Option<T> {
+    return this.minBy(minCmp);
+  }
+
+  /**
+   * **minByKey** return the element that gives the minimum value
+   * from the specified function.
+   * 
+   * Returns null if the iterator is empty.
+   * 
+   * @param f The function to get the value to compare
+   * @param cmp Optional comparator, if operator `<` doesn't suffice.
+   */
+  minByKey<U>(f: (v: T) => U, cmp: Comparator<U, U> = minCmp): Option<T> {
+    const res = this.map<[U, T]>((v) => [f(v), v]).minBy(([lhs], [rhs]) =>
+      cmp(lhs, rhs)
+    );
+    if (some(res)) {
+      return res[1];
+    }
+    return null;
   }
 }

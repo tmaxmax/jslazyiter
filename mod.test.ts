@@ -133,3 +133,21 @@ Deno.test("any", () => {
     assert(iter.next().done, "iterator shall be fully consumed");
   }
 });
+
+Deno.test("max", () => {
+  assertStrictEquals(new Iter([1, 2, 3, 4]).max(), 4);
+  assertStrictEquals(new Iter([]).max(), null);
+});
+
+Deno.test("maxByKey", () => {
+  assertStrictEquals(new Iter([1, 2, 3, 4]).maxByKey((v) => -v), 1);
+});
+
+Deno.test("min", () => {
+  assertStrictEquals(new Iter([1, 2, 3, 4]).min(), 1);
+  assertStrictEquals(new Iter([]).min(), null);
+});
+
+Deno.test("minByKey", () => {
+  assertStrictEquals(new Iter([1, 2, 3, 4]).minByKey((v) => -v), 4);
+});
