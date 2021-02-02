@@ -8,7 +8,7 @@ import { add } from "https://deno.land/x/fae@v1.0.0/mod.ts";
 import Iter from "./mod.ts";
 import { none, some } from "./option.ts";
 import { Result } from "./result.ts";
-import { cmpNumbers, parseIntegral } from "./util.ts";
+import { cmpNumbers, parseIntegral, range } from "./util.ts";
 
 Deno.test("is iterable", () => {
   const expect = [1, 2, 3, 4];
@@ -150,4 +150,9 @@ Deno.test("min", () => {
 
 Deno.test("minByKey", () => {
   assertStrictEquals(new Iter([1, 2, 3, 4]).minByKey((v) => -v), 4);
+});
+
+Deno.test("zip", () => {
+  const a = [1, 2, 3, 4].reverse();
+  assertEquals([...new Iter(a).zip(range())], [[4, 0], [3, 1], [2, 2], [1, 3]]);
 });
