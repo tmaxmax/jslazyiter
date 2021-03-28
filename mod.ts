@@ -1,5 +1,6 @@
 import { Option, some } from "./option.ts";
 import { ok, Result } from "./result.ts";
+import { Collection, Constructor, default as extend } from "./extender.ts";
 
 /**
  * **Comparator** represents a comparator functions.
@@ -297,7 +298,7 @@ export default class Iter<T> implements IterableIterator<T> {
    * 
    * @param p The predicate to be satisfied
    * @returns The first element satisfying the predicate, if any
-   */
+  */
   find(p: (v: T) => boolean): Option<T>;
   find<S extends T>(p: (v: T) => v is S): Option<S>;
   find(p: (v: T) => boolean): Option<T> {
@@ -823,4 +824,73 @@ export default class Iter<T> implements IterableIterator<T> {
 
     return new Iter({ next });
   }
+
+  /**
+   * **collect** Collects all the Iter's elements into a collection.
+   * 
+   * It is strongly recommended to use alternative methods
+   * to do this, such as using the spread operator, if collecting
+   * into an array, or passing the Iter as a constructor parameter,
+   * if collecting into a Set or a Map.
+   * 
+   * This method is useful if you want to join multiple strings into
+   * one without creating a temporary array.
+   * 
+   * @param constructor The constructor of the collection.
+   * @returns The collection with the iterator elements.
+   */
+  collect<
+    U extends Constructor<T>,
+    V extends Collection<T, U> = Collection<T, U>,
+  >(
+    constructor: U,
+  ): V {
+    const [collection, extender] = extend<T>(constructor);
+
+    return this.fold(collection, extender) as V;
+  }
+
+  /**
+   * **unzip** Converts an iterator of pairs into a pair of containers.
+   * 
+   * It consumes an entire iterator of pairs, producing two collections:
+   * one from the left elements of the pairs, and one from the right elements.
+   *
+   * This function is, in some sense, the opposite of zip.
+   * 
+   * NOTE: The type system tries to prevent calling this method
+   * if Iter's element type isn't a tuple, and ignoring it will
+   * result in a thrown exception.
+   *
+   * @param ca The constructor of the first collection.
+   * @param cb The constructor of the second collection.
+   * @returns A tuple with the resulted collections.
+   */
+  unzip<
+    A extends Constructor<First<T>>,
+    B extends Constructor<Second<T>>,
+    VA extends Collection<First<T>, A> = Collection<First<T>, A>,
+    VB extends Collection<Second<T>, B> = Collection<Second<T>, B>,
+  >(
+    ca: A,
+    cb: B,
+  ): [VA, VB] {
+    const [colA, extA] = extend<First<T>>(ca);
+    const [colB, extB] = extend<Second<T>>(cb);
+
+    return this.fold([colA, colB], (acc, v) => {
+      acc[0] = extA(
+        acc[0] as typeof colA,
+        (v as unknown as [First<T>, Second<T>])[0],
+      );
+      acc[1] = extB(
+        acc[1] as typeof colB,
+        (v as unknown as [First<T>, Second<T>])[1],
+      );
+      return acc;
+    }) as [VA, VB];
+  }
 }
+
+type First<T> = [T] extends [[infer K, unknown]] ? K : never;
+type Second<T> = [T] extends [[unknown, infer K]] ? K : never;
