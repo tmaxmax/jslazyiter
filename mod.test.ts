@@ -156,3 +156,38 @@ Deno.test("zip", () => {
   const a = [1, 2, 3, 4].reverse();
   assertEquals([...new Iter(a).zip(range())], [[4, 0], [3, 1], [2, 2], [1, 3]]);
 });
+
+Deno.test("collect", () => {
+  {
+    const arr: [number, number][] = [[1, 1], [2, 2], [3, 3], [4, 4]];
+    const a = new Iter(arr).collect(Map);
+    const b = new Map(arr);
+    assertEquals(a, b);
+  }
+  {
+    const arr = ["1", "2", "3"];
+    const a = new Iter(arr).collect(String);
+    const b = "123";
+    assertEquals(a, b);
+  }
+  {
+    const arr = [1, 2, 3, 3, 4];
+    const a = new Iter(arr).collect(Set);
+    const b = new Set(arr);
+    assertEquals(a, b);
+  }
+  {
+    const arr = [1, 2, 3];
+    const a = new Iter(arr).collect(Array);
+    assertEquals(a, arr);
+  }
+});
+
+Deno.test("unzip", () => {
+  const [a, b] = new Iter<[number, number]>([[1, 4], [2, 4]]).unzip(
+    Array,
+    Set,
+  );
+  assertEquals(a, [1, 2]);
+  assertEquals(b, new Set([4]));
+});
