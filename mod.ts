@@ -298,6 +298,8 @@ export default class Iter<T> implements IterableIterator<T> {
    * @param p The predicate to be satisfied
    * @returns The first element satisfying the predicate, if any
    */
+  find(p: (v: T) => boolean): Option<T>;
+  find<S extends T>(p: (v: T) => v is S): Option<S>;
   find(p: (v: T) => boolean): Option<T> {
     return this.tryFold<null, T>(null, (_, value) => {
       if (p(value)) {
@@ -348,6 +350,8 @@ export default class Iter<T> implements IterableIterator<T> {
    * 
    * @param p The predicate to be satisfied
    */
+  filter(p: (v: T) => boolean): Iter<T>;
+  filter<S extends T>(p: (v: T) => v is S): Iter<S>;
   filter(p: (v: T) => boolean): Iter<T> {
     const next = (): IteratorResult<T> => {
       const value = this.find(p);
