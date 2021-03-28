@@ -4,11 +4,11 @@ on:
   push:
     branches: [master, develop]
     paths:
-      - "**.ts"
+      - '**.ts'
   pull_request:
     branches: [master, develop]
     paths:
-      - "**.ts"
+      - '**.ts'
 
 jobs:
   test:
@@ -16,8 +16,8 @@ jobs:
 
     strategy:
       matrix:
-        deno: ["v1.x", "nightly"]
-        os: [macOS-latest, windows-latest, ubuntu-latest]
+        deno: ['v1.x', 'nightly']
+        os: [ubuntu-latest]
 
     steps:
       - name: Setup repo
